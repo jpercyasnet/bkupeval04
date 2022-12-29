@@ -1,0 +1,17 @@
+[package]
+name = "bkupeval01"
+version = "0.1.0"
+authors = ["jp"]
+
+[dependencies]
+gdk-pixbuf = "^0"
+gio = "^0"
+glib = "^0"
+chrono = "^0"
+regex = "^0"
+kamadak-exif = "^0"
+walkdir = "^0"
+
+[dependencies.gtk]
+package = "gtk4"
+git = "https://github.com/gtk-rs/gtk4-rs"
