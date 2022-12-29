@@ -4,7 +4,6 @@ extern crate chrono;
 extern crate regex;
 extern crate walkdir;
 
-use gtk::gdk;
 use gtk::glib;
 
 // use gtk::gdk_pixbuf::{Pixbuf};
@@ -28,7 +27,6 @@ use gtk::{
     ComboBoxText,
     Entry,
     Grid,
-    WidgetExt,
 };
 
 const STYLE: &str = "
@@ -131,19 +129,17 @@ pub fn build_ui(application: &gtk::Application) {
 
       let provider = gtk::CssProvider::new();
       provider.load_from_data(STYLE.as_bytes());
-      if let Some(display) = gdk::Display::get_default() {
-          gtk::StyleContext::add_provider_for_display(
-              &display,
+      gtk::StyleContext::add_provider_for_display(
+              &gtk::gdk::Display::default().expect("Could not connect to a display"),
               &provider,
               gtk::STYLE_PROVIDER_PRIORITY_APPLICATION,
-            );
-      } else {
-          eprintln!("Error initializing gtk css provider.");
-      };
+      );      
+         // We give the CssProvided to the default screen so the CSS rules we added
+        // can be applied to our window.
       
 
     let window = gtk::ApplicationWindow::new(application);
-    let wtitle = format!("Backup Evaluation Rust GTK4 version: {}.{}.{}",gtk::get_major_version(), gtk::get_minor_version(), gtk::get_micro_version());
+    let wtitle = format!("Backup Evaluation Rust GTK4 version: {}.{}.{}",gtk::major_version(), gtk::minor_version(), gtk::micro_version());
 
     window.set_title(Some(&wtitle));
 //    window.set_position(WindowPosition::Center);
@@ -151,13 +147,13 @@ pub fn build_ui(application: &gtk::Application) {
     
     let messageclear_button = Button::with_label("Clear");
     let messagetitle_label = Label::new(Some("Message: "));
-    gtk::WidgetExt::set_widget_name(&messagetitle_label, "MessTitle");
+    gtk::prelude::WidgetExt::set_widget_name(&messagetitle_label, "MessTitle");
     let messageval_label = Label::new(Some("Message area"));
     
     let progressreset_button = Button::with_label("Reset");
     let progress_progressbar = ProgressBar::new();
     progress_progressbar.set_show_text(true);
-    gtk::WidgetExt::set_widget_name(&progress_progressbar, "bar1");
+    gtk::prelude::WidgetExt::set_widget_name(&progress_progressbar, "bar1");
 
 
     let cdirectory1_button = Button::with_label("XML input file");
@@ -325,8 +321,8 @@ pub fn build_ui(application: &gtk::Application) {
 
             dialog.connect_response(move |d: &FileChooserDialog, response: gtk::ResponseType| {
                if response == gtk::ResponseType::Ok {
-                 if let Some(filename) = d.get_file() {
-                   if let Some(filepath) = filename.get_path() {
+                 if let Some(filename) = d.file() {
+                   if let Some(filepath) = filename.path() {
                      cdirectory1_combobox.prepend_text(&filepath.display().to_string());
                      cdirectory1_combobox.set_active(Some(0));
                      messageval_label.set_text("XML file selected");
@@ -337,7 +333,7 @@ pub fn build_ui(application: &gtk::Application) {
                     messageval_label.set_markup("<span color=\"#FF000000\">********* Directory : ERROR GETTING file **********</span>");
                  }
                }
-               if messageval_label.get_text() == "getting directory" {
+               if messageval_label.text() == "getting directory" {
                    messageval_label.set_markup("<span color=\"#FF000000\">********* Directory: ERROR  OPEN  button not selected **********</span>");
                }
                d.close();
@@ -361,8 +357,8 @@ pub fn build_ui(application: &gtk::Application) {
         );
         dialog.connect_response(move |d: &FileChooserDialog, response: gtk::ResponseType| {
           if response == gtk::ResponseType::Ok {
-            if let Some(foldername) = d.get_file() {
-              if let Some(folderpath) = foldername.get_path() {
+            if let Some(foldername) = d.file() {
+              if let Some(folderpath) = foldername.path() {
                      cdirectory_o_combobox.prepend_text(&folderpath.display().to_string());
                      cdirectory_o_combobox.set_active(Some(0));
                      messageval_label.set_text("Target folder selected");
@@ -373,7 +369,7 @@ pub fn build_ui(application: &gtk::Application) {
                 messageval_label.set_markup("<span color=\"#FF000000\">********* Directory: ERROR GETTING folder **********</span>");
             }
           }
-          if messageval_label.get_text() == "getting directory" {
+          if messageval_label.text() == "getting directory" {
               messageval_label.set_markup("<span color=\"#FF000000\">********* Directory: ERROR  OPEN  button not selected **********</span>");
           }
           d.close();
@@ -383,7 +379,7 @@ pub fn build_ui(application: &gtk::Application) {
 //----------------- target directory button end -----------------------------------
 //----------------- get rows button start -----------------------------------
     cgetrows_button.connect_clicked(glib::clone!(@weak cdirectory1_combobox, @weak cnumrows_entry, @weak progress_progressbar, @weak messageval_label  => move|_| {
-        if let Some(filename) = cdirectory1_combobox.get_active_text() {
+        if let Some(filename) = cdirectory1_combobox.active_text() {
             let str_filename = filename.to_string();
             if Path::new(&str_filename).exists() {
                 let mut bolok = true;
@@ -449,10 +445,10 @@ pub fn build_ui(application: &gtk::Application) {
         while glib::MainContext::pending(&glib::MainContext::default()) {
                glib::MainContext::iteration(&glib::MainContext::default(),true);
         }
-        if let Some(dirname) = cdirectory_o_combobox.get_active_text() {
+        if let Some(dirname) = cdirectory_o_combobox.active_text() {
             let str_dirname = dirname.to_string();
             if Path::new(&str_dirname).exists() {
-                let strtarget = ctarget_entry.get_text();
+                let strtarget = ctarget_entry.text();
                 if strtarget.len() < 4 {
                     messageval_label.set_markup("<span color=\"#FF000000\">********* target name less than 4 characters **********</span>");
                     bolok = false;
@@ -490,7 +486,7 @@ pub fn build_ui(application: &gtk::Application) {
             bolok = false;
         }
         if bolok {
-            let strnumrows = cnumrows_entry.get_text();
+            let strnumrows = cnumrows_entry.text();
             numrows = strnumrows.parse().unwrap_or(-99);
             if numrows < 10 {
                 messageval_label.set_markup("<span color=\"#FF000000\">********* INVALID NUMBER IN NUMBER OF ROWS ENTRY **********</span>");
@@ -498,7 +494,7 @@ pub fn build_ui(application: &gtk::Application) {
             }
         }
         if bolok {         
-          if let Some(filename) = cdirectory1_combobox.get_active_text() {
+          if let Some(filename) = cdirectory1_combobox.active_text() {
             let str_filename = filename.to_string();
             let str_filenamex = str_filename.clone();
             if Path::new(&str_filename).exists() {
@@ -670,8 +666,8 @@ pub fn build_ui(application: &gtk::Application) {
         );
         dialog.connect_response(move |d: &FileChooserDialog, response: gtk::ResponseType| {
           if response == gtk::ResponseType::Ok {
-            if let Some(foldername) = d.get_file() {
-              if let Some(folderpath) = foldername.get_path() {
+            if let Some(foldername) = d.file() {
+              if let Some(folderpath) = foldername.path() {
                      hdirectory1_combobox.prepend_text(&folderpath.display().to_string());
                      hdirectory1_combobox.set_active(Some(0));
                      messageval_label.set_text("Target folder selected");
@@ -682,7 +678,7 @@ pub fn build_ui(application: &gtk::Application) {
                 messageval_label.set_markup("<span color=\"#FF000000\">********* Directory: ERROR GETTING folder **********</span>");
             }
           }
-          if messageval_label.get_text() == "getting directory" {
+          if messageval_label.text() == "getting directory" {
               messageval_label.set_markup("<span color=\"#FF000000\">********* Directory: ERROR  OPEN  button not selected **********</span>");
           }
           d.close();
@@ -704,8 +700,8 @@ pub fn build_ui(application: &gtk::Application) {
         );
         dialog.connect_response(move |d: &FileChooserDialog, response: gtk::ResponseType| {
           if response == gtk::ResponseType::Ok {
-            if let Some(foldername) = d.get_file() {
-              if let Some(folderpath) = foldername.get_path() {
+            if let Some(foldername) = d.file() {
+              if let Some(folderpath) = foldername.path() {
                      hdirectory_o_combobox.prepend_text(&folderpath.display().to_string());
                      hdirectory_o_combobox.set_active(Some(0));
                      messageval_label.set_text("Target folder selected");
@@ -716,7 +712,7 @@ pub fn build_ui(application: &gtk::Application) {
                 messageval_label.set_markup("<span color=\"#FF000000\">********* Directory: ERROR GETTING folder **********</span>");
             }
           }
-          if messageval_label.get_text() == "getting directory" {
+          if messageval_label.text() == "getting directory" {
               messageval_label.set_markup("<span color=\"#FF000000\">********* Directory: ERROR  OPEN  button not selected **********</span>");
           }
           d.close();
@@ -737,10 +733,10 @@ pub fn build_ui(application: &gtk::Application) {
         while glib::MainContext::pending(&glib::MainContext::default()) {
                glib::MainContext::iteration(&glib::MainContext::default(),true);
         }
-        if let Some(dirname) = hdirectory_o_combobox.get_active_text() {
+        if let Some(dirname) = hdirectory_o_combobox.active_text() {
             let str_dirname = dirname.to_string();
             if Path::new(&str_dirname).exists() {
-                let strtarget = htarget_entry.get_text();
+                let strtarget = htarget_entry.text();
                 if strtarget.len() < 4 {
                     messageval_label.set_markup("<span color=\"#FF000000\">********* target name less than 4 characters **********</span>");
                     bolok = false;
@@ -777,7 +773,7 @@ pub fn build_ui(application: &gtk::Application) {
             bolok = false;
         }
         if bolok {
-            strref = href_entry.get_text().to_string();
+            strref = href_entry.text().to_string();
             if strref.len() < 3 {
                 messageval_label.set_markup("<span color=\"#FF000000\">********* reference name less than 3 characters **********</span>");
                 bolok = false;
@@ -789,7 +785,7 @@ pub fn build_ui(application: &gtk::Application) {
             }
         }
         if bolok {
-          if let Some(dirname) = hdirectory1_combobox.get_active_text() {
+          if let Some(dirname) = hdirectory1_combobox.active_text() {
             let str_dirname = dirname.to_string();
             if Path::new(&str_dirname).exists() {
                 let mut targetfile = File::create(targetfullname).unwrap();
@@ -866,8 +862,8 @@ pub fn build_ui(application: &gtk::Application) {
 
             dialog.connect_response(move |d: &FileChooserDialog, response: gtk::ResponseType| {
                if response == gtk::ResponseType::Ok {
-                 if let Some(filename) = d.get_file() {
-                   if let Some(filepath) = filename.get_path() {
+                 if let Some(filename) = d.file() {
+                   if let Some(filepath) = filename.path() {
                      edirectory1_combobox.prepend_text(&filepath.display().to_string());
                      edirectory1_combobox.set_active(Some(0));
                      messageval_label.set_text("cd file selected");
@@ -878,7 +874,7 @@ pub fn build_ui(application: &gtk::Application) {
                     messageval_label.set_markup("<span color=\"#FF000000\">********* Directory : ERROR GETTING cd file **********</span>");
                  }
                }
-               if messageval_label.get_text() == "getting directory" {
+               if messageval_label.text() == "getting directory" {
                    messageval_label.set_markup("<span color=\"#FF000000\">********* Directory: ERROR  OPEN  button not selected for cd file **********</span>");
                }
                d.close();
@@ -902,8 +898,8 @@ pub fn build_ui(application: &gtk::Application) {
 
             dialog.connect_response(move |d: &FileChooserDialog, response: gtk::ResponseType| {
                if response == gtk::ResponseType::Ok {
-                 if let Some(filename) = d.get_file() {
-                   if let Some(filepath) = filename.get_path() {
+                 if let Some(filename) = d.file() {
+                   if let Some(filepath) = filename.path() {
                      edirectory2_combobox.prepend_text(&filepath.display().to_string());
                      edirectory2_combobox.set_active(Some(0));
                      messageval_label.set_text("hd file selected");
@@ -914,7 +910,7 @@ pub fn build_ui(application: &gtk::Application) {
                     messageval_label.set_markup("<span color=\"#FF000000\">********* Directory : ERROR GETTING hd file **********</span>");
                  }
                }
-               if messageval_label.get_text() == "getting directory" {
+               if messageval_label.text() == "getting directory" {
                    messageval_label.set_markup("<span color=\"#FF000000\">********* Directory: ERROR  OPEN  button not selected for hd file **********</span>");
                }
                d.close();
@@ -937,8 +933,8 @@ pub fn build_ui(application: &gtk::Application) {
         );
         dialog.connect_response(move |d: &FileChooserDialog, response: gtk::ResponseType| {
           if response == gtk::ResponseType::Ok {
-            if let Some(foldername) = d.get_file() {
-              if let Some(folderpath) = foldername.get_path() {
+            if let Some(foldername) = d.file() {
+              if let Some(folderpath) = foldername.path() {
                      edirectory_o_combobox.prepend_text(&folderpath.display().to_string());
                      edirectory_o_combobox.set_active(Some(0));
                      messageval_label.set_text("Target folder selected");
@@ -949,7 +945,7 @@ pub fn build_ui(application: &gtk::Application) {
                 messageval_label.set_markup("<span color=\"#FF000000\">********* Directory: ERROR GETTING folder for target **********</span>");
             }
           }
-          if messageval_label.get_text() == "getting directory" {
+          if messageval_label.text() == "getting directory" {
               messageval_label.set_markup("<span color=\"#FF000000\">********* Directory: ERROR  OPEN  button not selected for target **********</span>");
           }
           d.close();
@@ -959,7 +955,7 @@ pub fn build_ui(application: &gtk::Application) {
 //----------------- target directory button end -----------------------------------
 //----------------- get rows button start -----------------------------------
     egetrows_button.connect_clicked(glib::clone!(@weak edirectory2_combobox, @weak enumrows_entry, @weak progress_progressbar, @weak messageval_label  => move|_| {
-        if let Some(filename) = edirectory2_combobox.get_active_text() {
+        if let Some(filename) = edirectory2_combobox.active_text() {
             let str_filename = filename.to_string();
             if Path::new(&str_filename).exists() {
                 let mut bolok = true;
@@ -1029,10 +1025,10 @@ pub fn build_ui(application: &gtk::Application) {
         while glib::MainContext::pending(&glib::MainContext::default()) {
                glib::MainContext::iteration(&glib::MainContext::default(),true);
         }
-        if let Some(dirname) = edirectory_o_combobox.get_active_text() {
+        if let Some(dirname) = edirectory_o_combobox.active_text() {
             let str_dirname = dirname.to_string();
             if Path::new(&str_dirname).exists() {
-                let strsame = esame_entry.get_text();
+                let strsame = esame_entry.text();
                 if strsame.len() < 4 {
                     messageval_label.set_markup("<span color=\"#FF000000\">********* same name less than 4 characters **********</span>");
                     bolok = false;
@@ -1061,7 +1057,7 @@ pub fn build_ui(application: &gtk::Application) {
                     }
                 }
                 if bolok {
-                    let strdiff = ediff_entry.get_text();
+                    let strdiff = ediff_entry.text();
                     if strdiff.len() < 4 {
                         messageval_label.set_markup("<span color=\"#FF000000\">********* different name less than 4 characters **********</span>");
                         bolok = false;
@@ -1091,7 +1087,7 @@ pub fn build_ui(application: &gtk::Application) {
                     }
                 }
                 if bolok {
-                    let strnf = enf_entry.get_text();
+                    let strnf = enf_entry.text();
                     if strnf.len() < 4 {
                         messageval_label.set_markup("<span color=\"#FF000000\">********* not found name less than 4 characters **********</span>");
                         bolok = false;
@@ -1129,7 +1125,7 @@ pub fn build_ui(application: &gtk::Application) {
             bolok = false;
         }
         if bolok {         
-          if let Some(filename) = edirectory1_combobox.get_active_text() {
+          if let Some(filename) = edirectory1_combobox.active_text() {
             let str_filename = filename.to_string();
             if Path::new(&str_filename).exists() {
                 cdfullname = str_filename;
@@ -1144,7 +1140,7 @@ pub fn build_ui(application: &gtk::Application) {
           }
         }
         if bolok {         
-          if let Some(filename) = edirectory2_combobox.get_active_text() {
+          if let Some(filename) = edirectory2_combobox.active_text() {
             let str_filename = filename.to_string();
             if Path::new(&str_filename).exists() {
                 hdfullname = str_filename;
@@ -1159,7 +1155,7 @@ pub fn build_ui(application: &gtk::Application) {
           }
         }
         if bolok {
-            let strnumrows = enumrows_entry.get_text();
+            let strnumrows = enumrows_entry.text();
             numrows = strnumrows.parse().unwrap_or(-99);
             if numrows < 10 {
                 messageval_label.set_markup("<span color=\"#FF000000\">********* INVALID NUMBER IN NUMBER OF ROWS ENTRY **********</span>");

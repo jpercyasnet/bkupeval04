@@ -3,7 +3,7 @@ extern crate exif;
 extern crate chrono;
 extern crate regex;
 extern crate walkdir;
-use std::env::args;
+use std::env;
 
 use gtk::prelude::*;
 
@@ -13,14 +13,12 @@ mod build_ui;
 
 fn main() {
 
+    env::set_var("RUST_BACKTRACE", "1");
     let application =
-        gtk::Application::new(Some("org.bkupeval01"), Default::default())
-            .expect("Initialization failed...");
+        gtk::Application::new(Some("org.bkupeval01"), Default::default());
 
-    application.connect_activate(|app| {
-        build_ui(app);
-    });
+    application.connect_activate(build_ui);
 
-    application.run(&args().collect::<Vec<_>>());
+    application.run();
 
 }
